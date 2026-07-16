@@ -1,8 +1,6 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
 # dependencies
-/node_modules
-/.pnp
+node_modules/
+.pnp
 .pnp.*
 .yarn/*
 !.yarn/patches
@@ -10,35 +8,58 @@
 !.yarn/releases
 !.yarn/versions
 
-# testing
-/coverage
-
 # next.js
-/.next/
-/out/
+.next/
+out/
 
 # production
-/build
+build/
+dist/
 
-# misc
-.DS_Store
-*.pem
+# env files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
-# debug
+# service account keys (SENSITIVE)
+serviceAccountKey.json
+*.json.key
+*-key.json
+*-service-account.json
+firebase-adminsdk*.json
+credentials*.json
+
+# logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+*.log
 
-# env files (can opt-in for committing if needed)
-.env*
+# misc
+.DS_Store
+Thumbs.db
+*.pem
+*.key
+*.cert
 
-# service account keys
-serviceAccountKey.json
-*.json.key
+# testing
+coverage/
+.nyc_output/
 
-# scripts output
-scripts/*.log
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Desktop.ini
+ehthumbs.db
 
 # vercel
 .vercel
@@ -46,3 +67,20 @@ scripts/*.log
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# auto-generated docs
+AGENTS.md
+CLAUDE.md
+
+# default next.js assets
+public/file.svg
+public/globe.svg
+public/next.svg
+public/vercel.svg
+public/window.svg
+
+# netlify
+.netlify/
+
+# scripts (local only)
+scripts/*.log
