@@ -334,7 +334,7 @@ export default function HistoryPage() {
                             </Button>
                           )}
                           {/* Agree toggle */}
-                          {!lead.agree && (
+                          {!lead.agree && !lead.red && (
                             <Button
                               size="sm"
                               variant="success"
@@ -343,6 +343,18 @@ export default function HistoryPage() {
                               title="Mark as Agreed"
                             >
                               <ThumbsUp className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                          {/* Red flag */}
+                          {!lead.red && (
+                            <Button
+                              size="sm"
+                              variant="danger"
+                              onClick={() => updateLead(lead, "RED?", "TRUE")}
+                              disabled={isUpdating}
+                              title="Mark as RED"
+                            >
+                              <XCircle className="h-3.5 w-3.5" />
                             </Button>
                           )}
                           {/* Undo: clear TEXTED */}
