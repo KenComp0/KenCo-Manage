@@ -15,6 +15,7 @@ import {
   BarChart3,
   Calendar,
   Target,
+  Download,
 } from "lucide-react";
 
 export default function SettingsPage() {
@@ -23,6 +24,7 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [backing, setBacking] = useState(false);
 
   useEffect(() => {
     if (isAdmin) {
@@ -55,6 +57,29 @@ export default function SettingsPage() {
     setUsers((prev) =>
       prev.map((u) => (u.uid === uid ? { ...u, role } : u))
     );
+  };
+
+  const handleBackup = async () => {
+    setBacking(true);
+    try {
+      const res = await fetch("/api/backup");
+      const data = await res.json();
+
+      const blob = new Blob([JSON.stringify(data, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = data.filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Backup failed:", error);
+      alert("Backup failed. Try again.");
+    } finally {
+      setBacking(false);
+    }
   };
 
   if (!user) return null;
@@ -204,6 +229,16 @@ export default function SettingsPage() {
                 </p>
                 <p className="text-xs text-muted">100 API requests per minute</p>
               </div>
+              <button
+                onClick={handleBackup}
+                disabled={backing}
+                className="w-full flex items-center justify-center gap-2 p-4 rounded-xl bg-primary/10 hover:bg-primary/20 transition-colors"
+              >
+                <Download className="h-4 w-4 text-primary" />
+                <span className="text-sm font-medium text-primary">
+                  {backing ? "Backing up..." : "Download Backup (JSON)"}
+                </span>
+              </button>
             </div>
           </Card>
 

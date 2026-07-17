@@ -6,7 +6,6 @@ import { Card, CardHeader, CardTitle } from "@/components/Card";
 import { Button } from "@/components/Button";
 import { Badge } from "@/components/Badge";
 import { CATEGORIES, MESSAGES_MAP } from "@/lib/config";
-import { incrementSendCount } from "@/lib/user-profile";
 import {
   Play,
   SkipForward,
@@ -60,13 +59,27 @@ export default function SendPage() {
   // Message
   const [message, setMessage] = useState("");
 
-  // Daily stats from Firestore
+  // Daily stats from server
   const [dailySends, setDailySends] = useState(0);
-  const dailyLimit = parseInt(process.env.NEXT_PUBLIC_DAILY_LIMIT || "30", 10);
+  const [dailyLimit, setDailyLimit] = useState(30);
 
   useEffect(() => {
     setMessage(MESSAGES_MAP[selectedCategory] || "");
   }, [selectedCategory]);
+
+  useEffect(() => {
+    if (user?.uid) {
+      fetch(`/api/daily-limit?uid=${user.uid}`)
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.dailySends !== undefined) {
+            setDailySends(data.dailySends);
+            setDailyLimit(data.dailyLimit);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [user?.uid]);
 
   const fetchNextLead = useCallback(
     async (afterRow?: number) => {
@@ -104,12 +117,6 @@ export default function SendPage() {
   const handleSend = async () => {
     if (!currentLead || !user) return;
 
-    // Check daily limit
-    if (dailySends >= dailyLimit) {
-      alert(`Daily limit reached (${dailyLimit}). Try again tomorrow.`);
-      return;
-    }
-
     setSending(true);
     try {
       const formattedPhone = formatPhone(currentLead.phoneNumber);
@@ -121,8 +128,8 @@ export default function SendPage() {
         window.open(waUrl, "_blank");
       }
 
-      // Update sheet
-      await fetch(`/api/leads/${currentLead.row}/send`, {
+      // Update sheet + server-side limit check
+      const res = await fetch(`/api/leads/${currentLead.row}/send`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -132,9 +139,21 @@ export default function SendPage() {
         }),
       });
 
-      // Update Firestore counter
-      const counts = await incrementSendCount(user.uid);
-      setDailySends(counts.dailySends);
+      const data = await res.json();
+
+      if (!res.ok) {
+        if (res.status === 429) {
+          alert(`Daily limit reached (${data.dailyLimit}). Try again tomorrow.`);
+          setDailySends(data.dailySends);
+          return;
+        }
+        throw new Error(data.error || "Send failed");
+      }
+
+      // Update counts from server response
+      if (data.dailySends !== undefined) {
+        setDailySends(data.dailySends);
+      }
 
       setSessionStats((prev) => ({ ...prev, sent: prev.sent + 1 }));
 
