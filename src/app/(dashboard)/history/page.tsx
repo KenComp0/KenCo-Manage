@@ -80,6 +80,46 @@ export default function HistoryPage() {
     }
   };
 
+  const undoAll = useCallback(
+    async (lead: HistoryLead) => {
+      const key = `${lead.tab}-${lead.row}`;
+      setUpdating(key);
+      try {
+        const fields = [
+          { field: "TEXTED?", value: "" },
+          { field: "AGREE?", value: "" },
+          { field: "RED?", value: "" },
+        ];
+        for (const { field, value } of fields) {
+          await fetch(`/api/leads/${lead.row}/update`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              tab: lead.tab,
+              field,
+              value,
+              userName: user?.email,
+            }),
+          });
+        }
+
+        setLeads((prev) =>
+          prev.map((l) => {
+            if (l.tab === lead.tab && l.row === lead.row) {
+              return { ...l, texted: false, agree: false, red: false };
+            }
+            return l;
+          })
+        );
+      } catch (error) {
+        console.error("Failed to undo all:", error);
+      } finally {
+        setUpdating(null);
+      }
+    },
+    [user?.email]
+  );
+
   const updateLead = useCallback(
     async (lead: HistoryLead, field: string, value: string) => {
       const key = `${lead.tab}-${lead.row}`;
@@ -313,7 +353,18 @@ export default function HistoryPage() {
                           {/* Call */}
                           {lead.phoneNumber && (
                             <a href={`tel:${lead.phoneNumber.replace(/\D/g, "")}`}>
-                              <Button size="sm" variant="primary">
+                              <Button
+                                size="sm"
+                                variant="primary"
+                                onClick={(e) => {
+                                  if (!lead.texted) {
+                                    e.preventDefault();
+                                    updateLead(lead, "TEXTED?", "TRUE").then(() => {
+                                      window.location.href = `tel:${lead.phoneNumber.replace(/\D/g, "")}`;
+                                    });
+                                  }
+                                }}
+                              >
                                 <Phone className="h-3.5 w-3.5" />
                               </Button>
                             </a>
@@ -326,7 +377,13 @@ export default function HistoryPage() {
                               onClick={() => {
                                 const phone = formatPhone(lead.phoneNumber);
                                 if (phone) {
-                                  window.open(`https://wa.me/${phone}`, "_blank");
+                                  if (!lead.texted) {
+                                    updateLead(lead, "TEXTED?", "TRUE").then(() => {
+                                      window.open(`https://wa.me/${phone}`, "_blank");
+                                    });
+                                  } else {
+                                    window.open(`https://wa.me/${phone}`, "_blank");
+                                  }
                                 }
                               }}
                             >
@@ -357,26 +414,14 @@ export default function HistoryPage() {
                               <XCircle className="h-3.5 w-3.5" />
                             </Button>
                           )}
-                          {/* Undo: clear TEXTED */}
-                          {lead.texted && !lead.red && (
+                          {/* Undo All */}
+                          {(lead.texted || lead.agree || lead.red) && (
                             <Button
                               size="sm"
                               variant="ghost"
-                              onClick={() => updateLead(lead, "TEXTED?", "")}
+                              onClick={() => undoAll(lead)}
                               disabled={isUpdating}
-                              title="Undo Send"
-                            >
-                              <RotateCcw className="h-3.5 w-3.5" />
-                            </Button>
-                          )}
-                          {/* Undo: clear RED */}
-                          {lead.red && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => updateLead(lead, "RED?", "")}
-                              disabled={isUpdating}
-                              title="Undo Red Flag"
+                              title="Undo All"
                             >
                               <RotateCcw className="h-3.5 w-3.5" />
                             </Button>
