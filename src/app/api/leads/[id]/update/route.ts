@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { updateLeadField } from "@/lib/google-sheets";
+import { logActivity } from "@/lib/activity";
 
 export async function POST(
   request: NextRequest,
@@ -7,7 +8,7 @@ export async function POST(
 ) {
   const { id } = await params;
   const body = await request.json();
-  const { tab, field, value, userName } = body;
+  const { tab, field, value, userName, businessName } = body;
   const rowNumber = parseInt(id, 10);
 
   if (!tab || !rowNumber || !field) {
@@ -32,6 +33,22 @@ export async function POST(
 
     if (field !== "Done By") {
       await updateLeadField(tab, rowNumber, "Done By", userId);
+    }
+
+    if (field !== "Done By" && businessName) {
+      let action: "texted" | "agreed" | "red" | "undo" = "undo";
+      if (field === "TEXTED?" && value === "TRUE") action = "texted";
+      else if (field === "AGREE?" && value === "TRUE") action = "agreed";
+      else if (field === "RED?" && value === "TRUE") action = "red";
+
+      await logActivity({
+        userId,
+        email: userId,
+        tab,
+        row: rowNumber,
+        businessName,
+        action,
+      });
     }
 
     return NextResponse.json({

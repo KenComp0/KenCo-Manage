@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { updateLeadField, updateDashboardCount } from "@/lib/google-sheets";
+import { logActivity } from "@/lib/activity";
 
 export async function POST(
   request: NextRequest,
@@ -23,12 +24,30 @@ export async function POST(
     if (red) {
       await updateLeadField(tab, rowNumber, "RED?", "TRUE");
       await updateLeadField(tab, rowNumber, "Done By", userId);
+
+      await logActivity({
+        userId,
+        email: userId,
+        tab,
+        row: rowNumber,
+        businessName,
+        action: "red",
+      });
     } else {
       await updateLeadField(tab, rowNumber, "TEXTED?", "TRUE");
       await updateLeadField(tab, rowNumber, "Done By", userId);
 
       const today = new Date().toISOString().split("T")[0];
       await updateDashboardCount(today);
+
+      await logActivity({
+        userId,
+        email: userId,
+        tab,
+        row: rowNumber,
+        businessName,
+        action: "texted",
+      });
     }
 
     return NextResponse.json({
