@@ -1,17 +1,5 @@
-import { app } from "./firebase";
-import {
-  getFirestore,
-  collection,
-  addDoc,
-  query,
-  where,
-  orderBy,
-  limit as firestoreLimit,
-  getDocs,
-  Timestamp,
-} from "firebase/firestore";
-
-const db = getFirestore(app);
+import { getAdminFirestore } from "./firebase-admin";
+import { FieldValue } from "firebase-admin/firestore";
 
 export interface Activity {
   id?: string;
@@ -21,14 +9,16 @@ export interface Activity {
   row: number;
   businessName: string;
   action: "texted" | "called" | "agreed" | "red" | "undo";
-  timestamp: Timestamp;
+  timestamp?: FieldValue;
+  timestampDate?: Date;
 }
 
-export async function logActivity(activity: Omit<Activity, "id" | "timestamp">) {
+export async function logActivity(activity: Omit<Activity, "id" | "timestamp" | "timestampDate">) {
   try {
-    await addDoc(collection(db, "activity"), {
+    const db = getAdminFirestore();
+    await db.collection("activity").add({
       ...activity,
-      timestamp: Timestamp.now(),
+      timestamp: FieldValue.serverTimestamp(),
     });
   } catch (error) {
     console.error("Failed to log activity:", error);
@@ -45,32 +35,36 @@ export async function getUserActivity(
     pageSize?: number;
     pageNum?: number;
   }
-): Promise<{ activities: Activity[]; total: number }> {
-  const constraints: any[] = [where("email", "==", email), orderBy("timestamp", "desc")];
+): Promise<{ activities: any[]; total: number }> {
+  const db = getAdminFirestore();
+  let q: FirebaseFirestore.Query = db
+    .collection("activity")
+    .where("email", "==", email)
+    .orderBy("timestamp", "desc");
 
   if (options?.tab) {
-    constraints.push(where("tab", "==", options.tab));
+    q = q.where("tab", "==", options.tab);
   }
 
   if (options?.action) {
-    constraints.push(where("action", "==", options.action));
+    q = q.where("action", "==", options.action);
   }
 
   if (options?.startDate) {
-    constraints.push(where("timestamp", ">=", Timestamp.fromDate(options.startDate)));
+    q = q.where("timestamp", ">=", options.startDate);
   }
 
   if (options?.endDate) {
-    constraints.push(where("timestamp", "<=", Timestamp.fromDate(options.endDate)));
+    q = q.where("timestamp", "<=", options.endDate);
   }
 
-  const q = query(collection(db, "activity"), ...constraints, firestoreLimit(500));
-  const snapshot = await getDocs(q);
+  q = q.limit(500);
+  const snapshot = await q.get();
 
   const activities = snapshot.docs.map((doc) => ({
     id: doc.id,
     ...doc.data(),
-  })) as Activity[];
+  }));
 
   return { activities, total: activities.length };
 }

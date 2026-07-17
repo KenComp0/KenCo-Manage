@@ -432,19 +432,37 @@ export default function SendPage() {
                 </Button>
               )}
               {currentLead.phoneNumber && (
-                <a
-                  href={`tel:${currentLead.phoneNumber.replace(/\D/g, "")}`}
+                <Button
+                  variant="primary"
+                  size="lg"
                   className="w-full"
+                  onClick={async () => {
+                    if (!currentLead || !user) return;
+                    setSending(true);
+                    try {
+                      await fetch(`/api/leads/${currentLead.row}/update`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          tab: selectedCategory,
+                          field: "TEXTED?",
+                          value: "TRUE",
+                          userName: user.email,
+                          businessName: currentLead.businessName,
+                        }),
+                      });
+                    } catch (error) {
+                      console.error("Failed to mark as called:", error);
+                    } finally {
+                      setSending(false);
+                      window.location.href = `tel:${currentLead.phoneNumber.replace(/\D/g, "")}`;
+                    }
+                  }}
+                  loading={sending}
                 >
-                  <Button
-                    variant="primary"
-                    size="lg"
-                    className="w-full"
-                  >
-                    <Phone className="h-5 w-5" />
-                    Call
-                  </Button>
-                </a>
+                  <Phone className="h-5 w-5" />
+                  Call
+                </Button>
               )}
               <Button
                 variant="secondary"

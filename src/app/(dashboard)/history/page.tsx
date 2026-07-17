@@ -188,7 +188,7 @@ export default function HistoryPage() {
           { field: "RED?", value: "" },
         ];
         for (const { field, value } of fields) {
-          await fetch(`/api/leads/${lead.row}/update`, {
+          const res = await fetch(`/api/leads/${lead.row}/update`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -199,6 +199,10 @@ export default function HistoryPage() {
               businessName: lead.businessName,
             }),
           });
+          if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.error || `Failed to clear ${field}`);
+          }
         }
 
         setLeads((prev) =>
@@ -211,6 +215,7 @@ export default function HistoryPage() {
         );
       } catch (error) {
         console.error("Failed to undo all:", error);
+        alert("Failed to undo all changes. Please try again.");
       } finally {
         setUpdating(null);
       }
@@ -223,7 +228,7 @@ export default function HistoryPage() {
       const key = `${lead.tab}-${lead.row}`;
       setUpdating(key);
       try {
-        await fetch(`/api/leads/${lead.row}/update`, {
+        const res = await fetch(`/api/leads/${lead.row}/update`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -234,6 +239,11 @@ export default function HistoryPage() {
             businessName: lead.businessName,
           }),
         });
+
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error || "Update failed");
+        }
 
         let action = "undo";
         if (field === "TEXTED?" && value === "TRUE") action = "texted";
@@ -254,6 +264,7 @@ export default function HistoryPage() {
         );
       } catch (error) {
         console.error("Failed to update lead:", error);
+        alert("Failed to update. Please try again.");
       } finally {
         setUpdating(null);
       }
