@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { Card } from "@/components/Card";
 import { Button } from "@/components/Button";
@@ -19,6 +19,9 @@ import {
   ChevronRight,
   Clock,
   History as HistoryIcon,
+  ThumbsUp,
+  RotateCcw,
+  Loader2,
 } from "lucide-react";
 
 interface HistoryLead {
@@ -51,6 +54,7 @@ export default function HistoryPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [filterTab, setFilterTab] = useState("all");
+  const [updating, setUpdating] = useState<string | null>(null);
 
   useEffect(() => {
     if (user?.email) {
@@ -75,6 +79,43 @@ export default function HistoryPage() {
       setLoading(false);
     }
   };
+
+  const updateLead = useCallback(
+    async (lead: HistoryLead, field: string, value: string) => {
+      const key = `${lead.tab}-${lead.row}`;
+      setUpdating(key);
+      try {
+        await fetch(`/api/leads/${lead.row}/update`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            tab: lead.tab,
+            field,
+            value,
+            userName: user?.email,
+          }),
+        });
+
+        setLeads((prev) =>
+          prev.map((l) => {
+            if (l.tab === lead.tab && l.row === lead.row) {
+              const updated = { ...l };
+              if (field === "AGREE?") updated.agree = value === "TRUE";
+              if (field === "TEXTED?") updated.texted = value === "TRUE";
+              if (field === "RED?") updated.red = value === "TRUE";
+              return updated;
+            }
+            return l;
+          })
+        );
+      } catch (error) {
+        console.error("Failed to update lead:", error);
+      } finally {
+        setUpdating(null);
+      }
+    },
+    [user?.email]
+  );
 
   const filteredLeads = leads.filter((lead) => {
     if (filterTab !== "all" && lead.tab !== filterTab) return false;
@@ -114,7 +155,7 @@ export default function HistoryPage() {
         </div>
         <div>
           <h1 className="text-2xl font-bold text-foreground">My History</h1>
-          <p className="text-muted mt-0.5">All leads you&apos;ve contacted</p>
+          <p className="text-muted mt-0.5">All leads you&apos;ve contacted — tap to edit status</p>
         </div>
       </div>
 
@@ -198,96 +239,141 @@ export default function HistoryPage() {
                 <tr className="border-b border-glass-border">
                   <th className="text-left py-3 px-3 text-xs font-medium text-muted">Business</th>
                   <th className="text-left py-3 px-3 text-xs font-medium text-muted">Phone</th>
-                  <th className="text-left py-3 px-3 text-xs font-medium text-muted hidden md:table-cell">Location</th>
+                  <th className="text-left py-3 px-3 text-xs font-medium text-muted hidden lg:table-cell">Location</th>
                   <th className="text-left py-3 px-3 text-xs font-medium text-muted">Category</th>
                   <th className="text-left py-3 px-3 text-xs font-medium text-muted">Status</th>
                   <th className="text-right py-3 px-3 text-xs font-medium text-muted">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredLeads.map((lead, i) => (
-                  <tr
-                    key={`${lead.tab}-${lead.row}-${i}`}
-                    className="border-b border-glass-border/50 hover:bg-surface/50 transition-colors"
-                  >
-                    <td className="py-3 px-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-xs font-medium text-primary flex-shrink-0">
-                          {lead.businessName.charAt(0).toUpperCase()}
+                {filteredLeads.map((lead, i) => {
+                  const key = `${lead.tab}-${lead.row}`;
+                  const isUpdating = updating === key;
+
+                  return (
+                    <tr
+                      key={`${key}-${i}`}
+                      className="border-b border-glass-border/50 hover:bg-surface/50 transition-colors"
+                    >
+                      <td className="py-3 px-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-xs font-medium text-primary flex-shrink-0">
+                            {lead.businessName.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-foreground truncate max-w-[180px]">
+                              {lead.businessName}
+                            </p>
+                            {lead.website && (
+                              <a
+                                href={lead.website}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-primary hover:underline flex items-center gap-1"
+                              >
+                                <Globe className="h-3 w-3" />
+                                Website
+                              </a>
+                            )}
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-sm font-medium text-foreground truncate max-w-[180px]">
-                            {lead.businessName}
-                          </p>
-                          {lead.website && (
-                            <a
-                              href={lead.website}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-xs text-primary hover:underline flex items-center gap-1"
-                            >
-                              <Globe className="h-3 w-3" />
-                              Website
+                      </td>
+                      <td className="py-3 px-3">
+                        <div className="flex items-center gap-2 text-sm text-foreground">
+                          <Phone className="h-3.5 w-3.5 text-muted" />
+                          {lead.phoneNumber || "—"}
+                        </div>
+                      </td>
+                      <td className="py-3 px-3 hidden lg:table-cell">
+                        <div className="flex items-center gap-2 text-sm text-muted max-w-[160px] truncate">
+                          <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
+                          {lead.location || "—"}
+                        </div>
+                      </td>
+                      <td className="py-3 px-3">
+                        <span className={`text-xs font-medium ${TAB_COLORS[lead.tab] || "text-muted"}`}>
+                          {lead.tab}
+                        </span>
+                      </td>
+                      <td className="py-3 px-3">
+                        {isUpdating ? (
+                          <Loader2 className="h-4 w-4 text-primary animate-spin" />
+                        ) : lead.red ? (
+                          <Badge variant="danger"><XCircle className="h-3 w-3" /> RED</Badge>
+                        ) : lead.agree ? (
+                          <Badge variant="info"><CheckCircle className="h-3 w-3" /> Agreed</Badge>
+                        ) : lead.texted ? (
+                          <Badge variant="success"><CheckCircle className="h-3 w-3" /> Sent</Badge>
+                        ) : (
+                          <Badge variant="warning"><AlertTriangle className="h-3 w-3" /> Pending</Badge>
+                        )}
+                      </td>
+                      <td className="py-3 px-3 text-right">
+                        <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                          {/* Call */}
+                          {lead.phoneNumber && (
+                            <a href={`tel:${lead.phoneNumber.replace(/\D/g, "")}`}>
+                              <Button size="sm" variant="primary">
+                                <Phone className="h-3.5 w-3.5" />
+                              </Button>
                             </a>
                           )}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-3 px-3">
-                      <div className="flex items-center gap-2 text-sm text-foreground">
-                        <Phone className="h-3.5 w-3.5 text-muted" />
-                        {lead.phoneNumber || "—"}
-                      </div>
-                    </td>
-                    <td className="py-3 px-3 hidden md:table-cell">
-                      <div className="flex items-center gap-2 text-sm text-muted max-w-[160px] truncate">
-                        <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
-                        {lead.location || "—"}
-                      </div>
-                    </td>
-                    <td className="py-3 px-3">
-                      <span className={`text-xs font-medium ${TAB_COLORS[lead.tab] || "text-muted"}`}>
-                        {lead.tab}
-                      </span>
-                    </td>
-                    <td className="py-3 px-3">
-                      {lead.red ? (
-                        <Badge variant="danger"><XCircle className="h-3 w-3" /> RED</Badge>
-                      ) : lead.agree ? (
-                        <Badge variant="info"><CheckCircle className="h-3 w-3" /> Agreed</Badge>
-                      ) : lead.texted ? (
-                        <Badge variant="success"><CheckCircle className="h-3 w-3" /> Sent</Badge>
-                      ) : (
-                        <Badge variant="warning"><AlertTriangle className="h-3 w-3" /> Pending</Badge>
-                      )}
-                    </td>
-                    <td className="py-3 px-3 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        {lead.phoneNumber && (
-                          <a href={`tel:${lead.phoneNumber.replace(/\D/g, "")}`}>
-                            <Button size="sm" variant="primary">
-                              <Phone className="h-3.5 w-3.5" />
+                          {/* WhatsApp */}
+                          {lead.phoneNumber && formatPhone(lead.phoneNumber) && (
+                            <Button
+                              size="sm"
+                              variant="success"
+                              onClick={() => {
+                                const phone = formatPhone(lead.phoneNumber);
+                                if (phone) {
+                                  window.open(`https://wa.me/${phone}`, "_blank");
+                                }
+                              }}
+                            >
+                              <Send className="h-3.5 w-3.5" />
                             </Button>
-                          </a>
-                        )}
-                        {lead.phoneNumber && formatPhone(lead.phoneNumber) && (
-                          <Button
-                            size="sm"
-                            variant="success"
-                            onClick={() => {
-                              const phone = formatPhone(lead.phoneNumber);
-                              if (phone) {
-                                window.open(`https://wa.me/${phone}`, "_blank");
-                              }
-                            }}
-                          >
-                            <Send className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                          )}
+                          {/* Agree toggle */}
+                          {!lead.agree && (
+                            <Button
+                              size="sm"
+                              variant="success"
+                              onClick={() => updateLead(lead, "AGREE?", "TRUE")}
+                              disabled={isUpdating}
+                              title="Mark as Agreed"
+                            >
+                              <ThumbsUp className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                          {/* Undo: clear TEXTED */}
+                          {lead.texted && !lead.red && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => updateLead(lead, "TEXTED?", "")}
+                              disabled={isUpdating}
+                              title="Undo Send"
+                            >
+                              <RotateCcw className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                          {/* Undo: clear RED */}
+                          {lead.red && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => updateLead(lead, "RED?", "")}
+                              disabled={isUpdating}
+                              title="Undo Red Flag"
+                            >
+                              <RotateCcw className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
