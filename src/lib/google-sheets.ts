@@ -152,9 +152,10 @@ export async function getNextPendingLead(
 
     const texted = isTruthy(row[textedIdx]);
     const red = isTruthy(row[redIdx]);
+    const agree = isTruthy(row[agreeIdx]);
     const hasPhone = (row[phoneIdx] || "").trim().length > 0;
 
-    if (!texted && !red && hasPhone) {
+    if (!texted && !red && !agree && hasPhone) {
       return {
         row: rowIndex,
         businessName: row[nameIdx] || "",
@@ -176,7 +177,7 @@ export async function getLeadStats(tabName: string) {
   const leads = await getLeadsFromSheet(tabName);
   return {
     total: leads.length,
-    pending: leads.filter((l) => !l.texted && !l.red).length,
+    pending: leads.filter((l) => !l.texted && !l.red && !l.agree).length,
     sent: leads.filter((l) => l.texted).length,
     red: leads.filter((l) => l.red).length,
   };
