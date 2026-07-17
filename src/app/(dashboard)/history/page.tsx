@@ -427,7 +427,7 @@ export default function HistoryPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-[700px]">
               <thead>
                 <tr className="border-b border-glass-border">
                   <th className="text-left py-3 px-3 text-xs font-medium text-muted">Business</th>

@@ -314,10 +314,10 @@ export default function SendPage() {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Top bar */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <Badge variant="info">{selectedCategory}</Badge>
-          <div className="flex items-center gap-4 text-sm">
+          <div className="flex items-center gap-3 text-xs sm:text-sm">
             <span className="text-success flex items-center gap-1">
               <CheckCircle className="h-3.5 w-3.5" /> {sessionStats.sent} sent
             </span>
@@ -329,7 +329,7 @@ export default function SendPage() {
             </span>
           </div>
         </div>
-        <Button variant="ghost" onClick={endSession}>
+        <Button variant="ghost" size="sm" onClick={endSession}>
           <LogOut className="h-4 w-4" />
           End Session
         </Button>
@@ -417,12 +417,12 @@ export default function SendPage() {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex gap-3">
+            <div className="grid grid-cols-2 sm:flex sm:gap-3 gap-2">
               {currentLead.phoneNumber && formatPhone(currentLead.phoneNumber) && (
                 <Button
                   variant="success"
                   size="lg"
-                  className="flex-1"
+                  className="w-full"
                   onClick={handleSend}
                   loading={sending}
                   disabled={dailySends >= dailyLimit}
@@ -434,7 +434,7 @@ export default function SendPage() {
               {currentLead.phoneNumber && (
                 <a
                   href={`tel:${currentLead.phoneNumber.replace(/\D/g, "")}`}
-                  className="flex-1"
+                  className="w-full"
                 >
                   <Button
                     variant="primary"
@@ -449,6 +449,7 @@ export default function SendPage() {
               <Button
                 variant="secondary"
                 size="lg"
+                className="w-full"
                 onClick={handleSkip}
                 loading={skipping}
               >
@@ -458,9 +459,11 @@ export default function SendPage() {
               <Button
                 variant="danger"
                 size="lg"
+                className="w-full"
                 onClick={handleRedFlag}
               >
                 <XCircle className="h-5 w-5" />
+                Red Flag
               </Button>
             </div>
 

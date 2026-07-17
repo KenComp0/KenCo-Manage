@@ -44,7 +44,7 @@ export default function DashboardLayout({
         userName={user.email || "User"}
         onLogout={handleLogout}
       />
-      <main className="ml-64 p-8">{children}</main>
+      <main className="lg:ml-64 p-4 pt-16 lg:p-8 lg:pt-8">{children}</main>
     </div>
   );
 }

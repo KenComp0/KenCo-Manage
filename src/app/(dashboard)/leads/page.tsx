@@ -226,15 +226,15 @@ export default function LeadsPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-[600px]">
               <thead>
                 <tr className="border-b border-glass-border">
-                  <th className="text-left py-3 px-4 text-xs font-medium text-muted">#</th>
-                  <th className="text-left py-3 px-4 text-xs font-medium text-muted">Business</th>
-                  <th className="text-left py-3 px-4 text-xs font-medium text-muted">Phone</th>
-                  <th className="text-left py-3 px-4 text-xs font-medium text-muted hidden md:table-cell">Location</th>
-                  <th className="text-left py-3 px-4 text-xs font-medium text-muted">Status</th>
-                  <th className="text-right py-3 px-4 text-xs font-medium text-muted">Actions</th>
+                  <th className="text-left py-3 px-3 text-xs font-medium text-muted hidden sm:table-cell">#</th>
+                  <th className="text-left py-3 px-3 text-xs font-medium text-muted">Business</th>
+                  <th className="text-left py-3 px-3 text-xs font-medium text-muted">Phone</th>
+                  <th className="text-left py-3 px-3 text-xs font-medium text-muted hidden md:table-cell">Location</th>
+                  <th className="text-left py-3 px-3 text-xs font-medium text-muted">Status</th>
+                  <th className="text-right py-3 px-3 text-xs font-medium text-muted">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -243,14 +243,14 @@ export default function LeadsPage() {
                     key={lead.row}
                     className="border-b border-glass-border/50 hover:bg-surface/50 transition-colors"
                   >
-                    <td className="py-3 px-4 text-xs text-muted">{lead.row}</td>
-                    <td className="py-3 px-4">
+                    <td className="py-3 px-3 text-xs text-muted hidden sm:table-cell">{lead.row}</td>
+                    <td className="py-3 px-3">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-xs font-medium text-primary">
                           {lead.businessName.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-foreground truncate max-w-[200px]">
+                          <p className="text-sm font-medium text-foreground truncate max-w-[160px]">
                             {lead.businessName}
                           </p>
                           {lead.website && (
@@ -267,19 +267,19 @@ export default function LeadsPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-3 px-3">
                       <div className="flex items-center gap-2 text-sm text-foreground">
                         <Phone className="h-3.5 w-3.5 text-muted" />
                         {lead.phoneNumber || "—"}
                       </div>
                     </td>
-                    <td className="py-3 px-4 hidden md:table-cell">
+                    <td className="py-3 px-3 hidden md:table-cell">
                       <div className="flex items-center gap-2 text-sm text-muted max-w-[200px] truncate">
                         <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
                         {lead.location || "—"}
                       </div>
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-3 px-3">
                       {lead.red ? (
                         <Badge variant="danger"><XCircle className="h-3 w-3" /> RED</Badge>
                       ) : lead.texted ? (
@@ -288,7 +288,7 @@ export default function LeadsPage() {
                         <Badge variant="warning"><AlertTriangle className="h-3 w-3" /> Pending</Badge>
                       )}
                     </td>
-                    <td className="py-3 px-4 text-right">
+                    <td className="py-3 px-3 text-right">
                       {!lead.texted && !lead.red && lead.phoneNumber && (
                         <Button size="sm" onClick={() => handleSend(lead)}>
                           <Send className="h-3.5 w-3.5" />

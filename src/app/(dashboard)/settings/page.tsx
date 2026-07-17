@@ -172,33 +172,35 @@ export default function SettingsPage() {
               {users.map((u) => (
                 <div
                   key={u.uid}
-                  className="flex items-center gap-4 p-3 rounded-xl bg-surface/50"
+                  className="flex flex-wrap items-center gap-3 p-3 rounded-xl bg-surface/50"
                 >
-                  <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-sm font-medium text-primary">
+                  <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-sm font-medium text-primary flex-shrink-0">
                     {u.name?.charAt(0) || u.email?.charAt(0)}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-foreground">{u.name}</p>
                     <p className="text-xs text-muted truncate">{u.email}</p>
                   </div>
-                  <div className="text-right text-xs text-muted">
-                    <p>{u.totalSends || 0} total</p>
-                    <p>{u.dailySends || 0} today</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <div className="text-right text-xs text-muted">
+                      <p>{u.totalSends || 0} total</p>
+                      <p>{u.dailySends || 0} today</p>
+                    </div>
+                    <Badge variant={u.role === "admin" ? "info" : "default"}>
+                      {u.role}
+                    </Badge>
+                    <select
+                      value={u.assignedTab}
+                      onChange={(e) => handleUpdateTab(u.uid, e.target.value)}
+                      className="px-2 py-1.5 rounded-lg text-xs bg-surface border border-glass-border"
+                    >
+                      <option value="Doctors">Doctors</option>
+                      <option value="Location">Location</option>
+                      <option value="Immobile">Immobile</option>
+                      <option value="Moto">Moto</option>
+                      <option value="Optic">Optic</option>
+                    </select>
                   </div>
-                  <Badge variant={u.role === "admin" ? "info" : "default"}>
-                    {u.role}
-                  </Badge>
-                  <select
-                    value={u.assignedTab}
-                    onChange={(e) => handleUpdateTab(u.uid, e.target.value)}
-                    className="px-3 py-1.5 rounded-lg text-xs bg-surface border border-glass-border"
-                  >
-                    <option value="Doctors">Doctors</option>
-                    <option value="Location">Location</option>
-                    <option value="Immobile">Immobile</option>
-                    <option value="Moto">Moto</option>
-                    <option value="Optic">Optic</option>
-                  </select>
                 </div>
               ))}
               {users.length === 0 && (
