@@ -24,9 +24,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(result);
   } catch (error: any) {
     console.error("Activity API error:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to fetch activity" },
-      { status: 500 }
-    );
+    return NextResponse.json({ activities: [], total: 0 });
   }
 }
