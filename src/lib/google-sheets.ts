@@ -200,7 +200,7 @@ export async function updateLeadField(
   await sheets.spreadsheets.values.update({
     spreadsheetId,
     range: `${tabName}!${colLetter}${rowNumber}`,
-    valueInputOption: "RAW",
+    valueInputOption: "USER_ENTERED",
     requestBody: { values: [[value]] },
   });
 }

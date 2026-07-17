@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSheetNames, getLeadsPage, getNextPendingLead, getLeadStats } from "@/lib/google-sheets";
+import { getSheetNames, getLeadsPage, getNextPendingLead, getLeadStats, getLeadsFromSheet } from "@/lib/google-sheets";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -8,6 +8,8 @@ export async function GET(request: NextRequest) {
   const getStats = searchParams.get("stats");
   const getNext = searchParams.get("next");
   const afterRow = searchParams.get("afterRow");
+  const history = searchParams.get("history");
+  const doneBy = searchParams.get("doneBy");
   const page = parseInt(searchParams.get("page") || "1", 10);
   const pageSize = parseInt(searchParams.get("pageSize") || "50", 10);
 
@@ -27,6 +29,31 @@ export async function GET(request: NextRequest) {
     if (getNext === "true" && tab) {
       const lead = await getNextPendingLead(tab, afterRow ? parseInt(afterRow, 10) : undefined);
       return NextResponse.json({ lead });
+    }
+
+    if (history === "true" && doneBy) {
+      const allTabs = await getSheetNames();
+      const skipSheets = ["Dashboard", "Users"];
+      const activeTabs = allTabs.filter((s) => !skipSheets.includes(s));
+
+      const allLeads: Array<{ tab: string; row: number; businessName: string; website: string; phoneNumber: string; location: string; texted: boolean; agree: boolean; red: boolean; doneBy: string }> = [];
+
+      for (const sheetTab of activeTabs) {
+        const leads = await getLeadsFromSheet(sheetTab);
+        for (const lead of leads) {
+          if (lead.doneBy && lead.doneBy.toLowerCase().includes(doneBy.toLowerCase())) {
+            allLeads.push({ tab: sheetTab, ...lead });
+          }
+        }
+      }
+
+      allLeads.sort((a, b) => b.row - a.row);
+
+      const totalPages = Math.ceil(allLeads.length / pageSize);
+      const start = (page - 1) * pageSize;
+      const paged = allLeads.slice(start, start + pageSize);
+
+      return NextResponse.json({ leads: paged, total: allLeads.length, page, totalPages });
     }
 
     if (!tab) {

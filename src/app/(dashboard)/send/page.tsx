@@ -165,6 +165,7 @@ export default function SendPage() {
           tab: selectedCategory,
           businessName: currentLead.businessName,
           userName: user?.email,
+          red: true,
         }),
       });
     } catch {}

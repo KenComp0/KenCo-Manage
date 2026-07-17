@@ -9,6 +9,7 @@ import {
   Zap,
   Settings,
   LogOut,
+  History,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -37,6 +38,12 @@ export function Sidebar({ isAdmin, userName, onLogout }: SidebarProps) {
       label: "Start Session",
       href: "/send",
       icon: Zap,
+      adminOnly: false,
+    },
+    {
+      label: "History",
+      href: "/history",
+      icon: History,
       adminOnly: false,
     },
     {
