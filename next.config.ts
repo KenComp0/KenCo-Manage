@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  serverExternalPackages: ["jose", "jwks-rsa"],
   experimental: {
     serverActions: {
       bodySizeLimit: "2mb",
