@@ -15,12 +15,8 @@ import {
   Globe,
   XCircle,
   CheckCircle,
-  MessageSquare,
-  ArrowRight,
-  Zap,
   RotateCcw,
   LogOut,
-  BarChart3,
 } from "lucide-react";
 
 interface Lead {
@@ -40,46 +36,21 @@ type SessionState = "idle" | "active" | "finished";
 export default function SendPage() {
   const { user, profile } = useAuth();
 
-  // Session state
   const [sessionState, setSessionState] = useState<SessionState>("idle");
   const [selectedCategory, setSelectedCategory] = useState("Location");
 
-  // Current lead
   const [currentLead, setCurrentLead] = useState<Lead | null>(null);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [skipping, setSkipping] = useState(false);
 
-  // Stats for this session
-  const [sessionStats, setSessionStats] = useState({
-    sent: 0,
-    skipped: 0,
-  });
+  const [sessionStats, setSessionStats] = useState({ sent: 0, skipped: 0 });
 
-  // Message
   const [message, setMessage] = useState("");
-
-  // Daily stats from server
-  const [dailySends, setDailySends] = useState(0);
-  const [dailyLimit, setDailyLimit] = useState(30);
 
   useEffect(() => {
     setMessage(MESSAGES_MAP[selectedCategory] || "");
   }, [selectedCategory]);
-
-  useEffect(() => {
-    if (user?.uid) {
-      fetch(`/api/daily-limit?uid=${user.uid}`)
-        .then((r) => r.json())
-        .then((data) => {
-          if (data.dailySends !== undefined) {
-            setDailySends(data.dailySends);
-            setDailyLimit(data.dailyLimit);
-          }
-        })
-        .catch(() => {});
-    }
-  }, [user?.uid]);
 
   const fetchNextLead = useCallback(
     async (afterRow?: number) => {
@@ -121,14 +92,12 @@ export default function SendPage() {
     try {
       const formattedPhone = formatPhone(currentLead.phoneNumber);
 
-      // Open WhatsApp
       if (formattedPhone) {
         const msg = message.replace("{business_name}", currentLead.businessName);
         const waUrl = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(msg)}`;
         window.open(waUrl, "_blank");
       }
 
-      // Update sheet + server-side limit check
       const res = await fetch(`/api/leads/${currentLead.row}/send`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -140,24 +109,9 @@ export default function SendPage() {
       });
 
       const data = await res.json();
-
-      if (!res.ok) {
-        if (res.status === 429) {
-          alert(`Daily limit reached (${data.dailyLimit}). Try again tomorrow.`);
-          setDailySends(data.dailySends);
-          return;
-        }
-        throw new Error(data.error || "Send failed");
-      }
-
-      // Update counts from server response
-      if (data.dailySends !== undefined) {
-        setDailySends(data.dailySends);
-      }
+      if (!res.ok) throw new Error(data.error || "Send failed");
 
       setSessionStats((prev) => ({ ...prev, sent: prev.sent + 1 }));
-
-      // Load next lead
       await fetchNextLead(currentLead.row);
     } catch (error) {
       console.error("Send failed:", error);
@@ -205,13 +159,12 @@ export default function SendPage() {
     return cleaned.startsWith("05") || cleaned.startsWith("5");
   };
 
-  // IDLE STATE — Pick category
   if (sessionState === "idle") {
     return (
       <div className="max-w-2xl mx-auto space-y-8 animate-fade-in">
         <div className="text-center mb-12">
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-primary/20 mb-6 glow-primary">
-            <Zap className="h-10 w-10 text-primary" />
+            <Play className="h-10 w-10 text-primary" />
           </div>
           <h1 className="text-3xl font-bold text-foreground mb-2">Start Session</h1>
           <p className="text-muted">Pick a category and start calling leads one by one</p>
@@ -269,7 +222,6 @@ export default function SendPage() {
     );
   }
 
-  // FINISHED STATE
   if (sessionState === "finished") {
     return (
       <div className="max-w-lg mx-auto space-y-8 animate-fade-in">
@@ -310,10 +262,8 @@ export default function SendPage() {
     );
   }
 
-  // ACTIVE STATE — Lead by lead
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Top bar */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3 flex-wrap">
           <Badge variant="info">{selectedCategory}</Badge>
@@ -324,9 +274,6 @@ export default function SendPage() {
             <span className="text-warning flex items-center gap-1">
               <SkipForward className="h-3.5 w-3.5" /> {sessionStats.skipped} skipped
             </span>
-            <span className="text-muted flex items-center gap-1">
-              <BarChart3 className="h-3.5 w-3.5" /> {dailySends}/{dailyLimit} today
-            </span>
           </div>
         </div>
         <Button variant="ghost" size="sm" onClick={endSession}>
@@ -335,15 +282,6 @@ export default function SendPage() {
         </Button>
       </div>
 
-      {/* Progress bar */}
-      <div className="h-1.5 rounded-full bg-surface overflow-hidden">
-        <div
-          className="h-full bg-primary rounded-full transition-all duration-300"
-          style={{ width: `${Math.min((dailySends / dailyLimit) * 100, 100)}%` }}
-        />
-      </div>
-
-      {/* Current Lead Card */}
       {loading ? (
         <Card className="min-h-[400px] flex items-center justify-center">
           <div className="text-center">
@@ -370,7 +308,6 @@ export default function SendPage() {
       ) : (
         <Card className="min-h-[400px]">
           <div className="flex flex-col h-full">
-            {/* Lead Info */}
             <div className="flex items-start gap-4 mb-6">
               <div className="w-14 h-14 rounded-2xl bg-primary/15 flex items-center justify-center text-xl font-bold text-primary flex-shrink-0">
                 {currentLead.businessName.charAt(0).toUpperCase()}
@@ -408,7 +345,6 @@ export default function SendPage() {
               </div>
             </div>
 
-            {/* Message Preview */}
             <div className="flex-1 p-4 rounded-xl bg-surface/50 mb-6">
               <p className="text-xs text-muted mb-2 font-medium">Message to send:</p>
               <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
@@ -416,7 +352,6 @@ export default function SendPage() {
               </p>
             </div>
 
-            {/* Action Buttons */}
             <div className="grid grid-cols-2 sm:flex sm:gap-3 gap-2">
               {currentLead.phoneNumber && formatPhone(currentLead.phoneNumber) && (
                 <Button
@@ -425,7 +360,6 @@ export default function SendPage() {
                   className="w-full"
                   onClick={handleSend}
                   loading={sending}
-                  disabled={dailySends >= dailyLimit}
                 >
                   <Send className="h-5 w-5" />
                   WhatsApp
@@ -484,12 +418,6 @@ export default function SendPage() {
                 Red Flag
               </Button>
             </div>
-
-            {dailySends >= dailyLimit && (
-              <p className="text-sm text-danger text-center mt-3">
-                Daily limit reached ({dailyLimit}). Come back tomorrow!
-              </p>
-            )}
           </div>
         </Card>
       )}

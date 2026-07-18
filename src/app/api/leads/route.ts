@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSheetNames, getLeadsPage, getNextPendingLead, getLeadStats, getLeadsFromSheet } from "@/lib/google-sheets";
+import { getCachedLeads, getAllCachedTabs } from "@/lib/sheet-cache";
+import type { Lead } from "@/types";
+
+const SKIP_SHEETS = ["Dashboard", "Users"];
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -15,31 +18,38 @@ export async function GET(request: NextRequest) {
 
   try {
     if (getTabs === "true") {
-      const sheets = await getSheetNames();
-      const skipSheets = ["Dashboard", "Users"];
-      const filteredSheets = sheets.filter((s) => !skipSheets.includes(s));
-      return NextResponse.json({ tabs: filteredSheets });
+      const tabs = await getAllCachedTabs();
+      return NextResponse.json({ tabs });
     }
 
     if (getStats === "true" && tab) {
-      const stats = await getLeadStats(tab);
-      return NextResponse.json({ stats });
+      const leads = await getCachedLeads(tab);
+      return NextResponse.json({
+        stats: {
+          total: leads.length,
+          pending: leads.filter((l) => !l.texted && !l.red && !l.agree).length,
+          sent: leads.filter((l) => l.texted).length,
+          red: leads.filter((l) => l.red).length,
+        },
+      });
     }
 
     if (getNext === "true" && tab) {
-      const lead = await getNextPendingLead(tab, afterRow ? parseInt(afterRow, 10) : undefined);
-      return NextResponse.json({ lead });
+      const leads = await getCachedLeads(tab);
+      const after = afterRow ? parseInt(afterRow, 10) : 0;
+      const nextLead = leads.find(
+        (l) => l.row > after && !l.texted && !l.red && !l.agree && l.phoneNumber?.trim()
+      );
+      return NextResponse.json({ lead: nextLead || null });
     }
 
     if (history === "true" && doneBy) {
-      const allTabs = await getSheetNames();
-      const skipSheets = ["Dashboard", "Users"];
-      const activeTabs = allTabs.filter((s) => !skipSheets.includes(s));
+      const tabs = await getAllCachedTabs();
+      const allLeads: Array<Lead & { tab: string }> = [];
 
-      const allLeads: Array<{ tab: string; row: number; businessName: string; website: string; phoneNumber: string; location: string; texted: boolean; agree: boolean; red: boolean; doneBy: string }> = [];
-
-      for (const sheetTab of activeTabs) {
-        const leads = await getLeadsFromSheet(sheetTab);
+      for (const sheetTab of tabs) {
+        if (SKIP_SHEETS.includes(sheetTab)) continue;
+        const leads = await getCachedLeads(sheetTab);
         for (const lead of leads) {
           if (lead.doneBy && lead.doneBy.toLowerCase().includes(doneBy.toLowerCase())) {
             allLeads.push({ tab: sheetTab, ...lead });
@@ -48,7 +58,6 @@ export async function GET(request: NextRequest) {
       }
 
       allLeads.sort((a, b) => b.row - a.row);
-
       const totalPages = Math.ceil(allLeads.length / pageSize);
       const start = (page - 1) * pageSize;
       const paged = allLeads.slice(start, start + pageSize);
@@ -60,8 +69,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Tab parameter required" }, { status: 400 });
     }
 
-    const result = await getLeadsPage(tab, page, pageSize);
-    return NextResponse.json(result);
+    const leads = await getCachedLeads(tab);
+    const totalPages = Math.ceil(leads.length / pageSize);
+    const start = (page - 1) * pageSize;
+    const paged = leads.slice(start, start + pageSize);
+
+    return NextResponse.json({
+      leads: paged,
+      total: leads.length,
+      page,
+      totalPages,
+    });
   } catch (error: any) {
     console.error("API Error:", error);
     return NextResponse.json(

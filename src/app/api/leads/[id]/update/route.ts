@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { updateLeadField } from "@/lib/google-sheets";
+import { updateCachedLead } from "@/lib/sheet-cache";
 import { logActivity } from "@/lib/activity";
 
 export async function POST(
@@ -30,16 +31,17 @@ export async function POST(
 
   try {
     await updateLeadField(tab, rowNumber, field, value);
+    await updateCachedLead(tab, rowNumber, field, value);
 
     if (field !== "Done By") {
       await updateLeadField(tab, rowNumber, "Done By", userId);
+      await updateCachedLead(tab, rowNumber, "Done By", userId);
     }
 
-    if (field !== "Done By" && businessName) {
-      let action: "texted" | "agreed" | "red" | "undo" = "undo";
-      if (field === "TEXTED?" && value === "TRUE") action = "texted";
-      else if (field === "AGREE?" && value === "TRUE") action = "agreed";
-      else if (field === "RED?" && value === "TRUE") action = "red";
+    if (field !== "Done By" && businessName && value === "TRUE") {
+      let action: "texted" | "agreed" | "red" = "texted";
+      if (field === "AGREE?") action = "agreed";
+      else if (field === "RED?") action = "red";
 
       await logActivity({
         userId,

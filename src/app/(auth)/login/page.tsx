@@ -3,20 +3,16 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase";
-import {
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-} from "firebase/auth";
+import { signInWithEmailAndPassword } from "firebase/auth";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
 import { Card } from "@/components/Card";
-import { Send, Mail, Lock, UserPlus, ArrowRight } from "lucide-react";
+import { Send, Mail, Lock, ArrowRight } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [isRegister, setIsRegister] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -26,11 +22,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      if (isRegister) {
-        await createUserWithEmailAndPassword(auth, email, password);
-      } else {
-        await signInWithEmailAndPassword(auth, email, password);
-      }
+      await signInWithEmailAndPassword(auth, email, password);
       router.push("/");
     } catch (err: any) {
       setError(err.message || "Authentication failed");
@@ -53,14 +45,8 @@ export default function LoginPage() {
         <Card className="p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="text-center mb-6">
-              <h2 className="text-xl font-semibold text-foreground">
-                {isRegister ? "Create Account" : "Welcome Back"}
-              </h2>
-              <p className="text-sm text-muted mt-1">
-                {isRegister
-                  ? "Sign up to get started"
-                  : "Sign in to your account"}
-              </p>
+              <h2 className="text-xl font-semibold text-foreground">Welcome Back</h2>
+              <p className="text-sm text-muted mt-1">Sign in to your account</p>
             </div>
 
             <Input
@@ -94,24 +80,10 @@ export default function LoginPage() {
               className="w-full"
               loading={loading}
             >
-              {isRegister ? "Create Account" : "Sign In"}
+              Sign In
               <ArrowRight className="h-4 w-4" />
             </Button>
           </form>
-
-          <div className="mt-6 text-center">
-            <button
-              onClick={() => {
-                setIsRegister(!isRegister);
-                setError("");
-              }}
-              className="text-sm text-muted hover:text-primary transition-colors"
-            >
-              {isRegister
-                ? "Already have an account? Sign in"
-                : "Don't have an account? Sign up"}
-            </button>
-          </div>
         </Card>
 
         <p className="text-center text-xs text-muted/60">

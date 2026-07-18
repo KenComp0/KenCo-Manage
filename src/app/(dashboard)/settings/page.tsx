@@ -4,27 +4,40 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { Card, CardHeader, CardTitle } from "@/components/Card";
 import { Button } from "@/components/Button";
+import { Input } from "@/components/Input";
 import { Badge } from "@/components/Badge";
 import { getAllUsers, updateUserProfile, type UserProfile } from "@/lib/user-profile";
 import {
   Users,
   Shield,
   Settings as SettingsIcon,
-  Save,
-  CheckCircle,
-  BarChart3,
-  Calendar,
-  Target,
   Download,
+  RefreshCw,
+  Target,
+  UserPlus,
+  Mail,
+  Lock,
+  X,
 } from "lucide-react";
 
 export default function SettingsPage() {
   const { user, profile, isAdmin } = useAuth();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
   const [backing, setBacking] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+
+  const [showCreateUser, setShowCreateUser] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState("");
+  const [createSuccess, setCreateSuccess] = useState("");
+  const [newUser, setNewUser] = useState({
+    email: "",
+    password: "",
+    name: "",
+    role: "sales" as "admin" | "sales",
+    assignedTab: "Location",
+  });
 
   useEffect(() => {
     if (isAdmin) {
@@ -52,11 +65,37 @@ export default function SettingsPage() {
     );
   };
 
-  const handleUpdateRole = async (uid: string, role: "admin" | "sales") => {
-    await updateUserProfile(uid, { role });
-    setUsers((prev) =>
-      prev.map((u) => (u.uid === uid ? { ...u, role } : u))
-    );
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreating(true);
+    setCreateError("");
+    setCreateSuccess("");
+
+    try {
+      const res = await fetch("/api/admin/create-user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...newUser,
+          createdBy: user?.email,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setCreateError(data.error || "Failed to create user");
+        return;
+      }
+
+      setCreateSuccess(`Account created for ${newUser.email}. They can now log in.`);
+      setNewUser({ email: "", password: "", name: "", role: "sales", assignedTab: "Location" });
+      await loadUsers();
+    } catch (error: any) {
+      setCreateError(error.message || "Failed to create user");
+    } finally {
+      setCreating(false);
+    }
   };
 
   const handleBackup = async () => {
@@ -82,9 +121,26 @@ export default function SettingsPage() {
     }
   };
 
+  const handleSync = async () => {
+    setSyncing(true);
+    try {
+      const res = await fetch("/api/sync");
+      const data = await res.json();
+      if (data.success) {
+        alert(`Synced ${data.synced.length} tabs successfully`);
+      } else {
+        alert(`Sync failed: ${data.error}`);
+      }
+    } catch (error) {
+      console.error("Sync failed:", error);
+      alert("Sync failed. Try again.");
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   if (!user) return null;
 
-  // SALES VIEW
   if (!isAdmin) {
     return (
       <div className="space-y-6 animate-fade-in max-w-2xl">
@@ -114,36 +170,11 @@ export default function SettingsPage() {
             </div>
             <p className="text-2xl font-bold text-foreground">{profile?.assignedTab}</p>
           </Card>
-
-          <Card>
-            <div className="flex items-center gap-3 mb-3">
-              <BarChart3 className="h-5 w-5 text-success" />
-              <p className="text-sm text-muted">Sent Today</p>
-            </div>
-            <p className="text-2xl font-bold text-foreground">{profile?.dailySends || 0}</p>
-          </Card>
-
-          <Card>
-            <div className="flex items-center gap-3 mb-3">
-              <Calendar className="h-5 w-5 text-warning" />
-              <p className="text-sm text-muted">All Time Total</p>
-            </div>
-            <p className="text-2xl font-bold text-foreground">{profile?.totalSends || 0}</p>
-          </Card>
-
-          <Card>
-            <div className="flex items-center gap-3 mb-3">
-              <CheckCircle className="h-5 w-5 text-primary" />
-              <p className="text-sm text-muted">Daily Limit</p>
-            </div>
-            <p className="text-2xl font-bold text-foreground">30</p>
-          </Card>
         </div>
       </div>
     );
   }
 
-  // ADMIN VIEW
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between mb-8">
@@ -156,10 +187,16 @@ export default function SettingsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-primary" />
-              Team Members
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-primary" />
+                Team Members
+              </CardTitle>
+              <Button size="sm" onClick={() => setShowCreateUser(true)}>
+                <UserPlus className="h-4 w-4" />
+                Add User
+              </Button>
+            </div>
           </CardHeader>
           {loading ? (
             <div className="space-y-3">
@@ -182,10 +219,6 @@ export default function SettingsPage() {
                     <p className="text-xs text-muted truncate">{u.email}</p>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <div className="text-right text-xs text-muted">
-                      <p>{u.totalSends || 0} total</p>
-                      <p>{u.dailySends || 0} today</p>
-                    </div>
                     <Badge variant={u.role === "admin" ? "info" : "default"}>
                       {u.role}
                     </Badge>
@@ -219,18 +252,16 @@ export default function SettingsPage() {
               </CardTitle>
             </CardHeader>
             <div className="space-y-3">
-              <div className="p-4 rounded-xl bg-surface/50">
-                <p className="text-sm font-medium text-foreground mb-1">
-                  Daily Send Limit
-                </p>
-                <p className="text-xs text-muted">30 messages per user per day</p>
-              </div>
-              <div className="p-4 rounded-xl bg-surface/50">
-                <p className="text-sm font-medium text-foreground mb-1">
-                  Rate Limiting
-                </p>
-                <p className="text-xs text-muted">100 API requests per minute</p>
-              </div>
+              <button
+                onClick={handleSync}
+                disabled={syncing}
+                className="w-full flex items-center justify-center gap-2 p-4 rounded-xl bg-success/10 hover:bg-success/20 transition-colors"
+              >
+                <RefreshCw className={`h-4 w-4 text-success ${syncing ? "animate-spin" : ""}`} />
+                <span className="text-sm font-medium text-success">
+                  {syncing ? "Syncing from Google Sheet..." : "Sync Google Sheet → Cache"}
+                </span>
+              </button>
               <button
                 onClick={handleBackup}
                 disabled={backing}
@@ -252,15 +283,129 @@ export default function SettingsPage() {
               </CardTitle>
             </CardHeader>
             <div className="space-y-2 text-sm text-muted">
-              <p>1. Sales person logs in and goes to <strong className="text-foreground">Start Session</strong></p>
-              <p>2. Pick a category (Doctors, Location, etc.)</p>
-              <p>3. See one lead at a time — call or send WhatsApp</p>
-              <p>4. Click Send to mark as done, or Skip to move on</p>
-              <p>5. Stats are tracked in Firebase automatically</p>
+              <p>1. Admin creates accounts via <strong className="text-foreground">Settings → Add User</strong></p>
+              <p>2. Sales person logs in and goes to <strong className="text-foreground">Start Session</strong></p>
+              <p>3. Pick a category (Doctors, Location, etc.)</p>
+              <p>4. See one lead at a time — call or send WhatsApp</p>
+              <p>5. Click Send to mark as done, or Skip to move on</p>
             </div>
           </Card>
         </div>
       </div>
+
+      {showCreateUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-md glass-card rounded-2xl p-6 animate-fade-in">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-bold text-foreground">Create New User</h3>
+              <button
+                onClick={() => {
+                  setShowCreateUser(false);
+                  setCreateError("");
+                  setCreateSuccess("");
+                }}
+                className="p-1 rounded-lg hover:bg-surface text-muted hover:text-foreground transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {createSuccess && (
+              <div className="p-3 rounded-lg bg-success/10 border border-success/20 text-sm text-success mb-4">
+                {createSuccess}
+              </div>
+            )}
+
+            {createError && (
+              <div className="p-3 rounded-lg bg-danger/10 border border-danger/20 text-sm text-danger mb-4">
+                {createError}
+              </div>
+            )}
+
+            <form onSubmit={handleCreateUser} className="space-y-4">
+              <Input
+                label="Email"
+                type="email"
+                placeholder="user@kenco.com"
+                value={newUser.email}
+                onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                icon={<Mail className="h-4 w-4" />}
+                required
+              />
+
+              <Input
+                label="Password"
+                type="password"
+                placeholder="Min 6 characters"
+                value={newUser.password}
+                onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                icon={<Lock className="h-4 w-4" />}
+                required
+                minLength={6}
+              />
+
+              <Input
+                label="Name"
+                type="text"
+                placeholder="Full name"
+                value={newUser.name}
+                onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                required
+              />
+
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-foreground">Role</label>
+                <select
+                  value={newUser.role}
+                  onChange={(e) => setNewUser({ ...newUser, role: e.target.value as "admin" | "sales" })}
+                  className="w-full px-4 py-3 rounded-xl bg-surface border border-glass-border text-foreground"
+                >
+                  <option value="sales">Sales</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-foreground">Assigned Category</label>
+                <select
+                  value={newUser.assignedTab}
+                  onChange={(e) => setNewUser({ ...newUser, assignedTab: e.target.value })}
+                  className="w-full px-4 py-3 rounded-xl bg-surface border border-glass-border text-foreground"
+                >
+                  <option value="Doctors">Doctors</option>
+                  <option value="Location">Location</option>
+                  <option value="Immobile">Immobile</option>
+                  <option value="Moto">Moto</option>
+                  <option value="Optic">Optic</option>
+                </select>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="flex-1"
+                  onClick={() => {
+                    setShowCreateUser(false);
+                    setCreateError("");
+                    setCreateSuccess("");
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  className="flex-1"
+                  loading={creating}
+                >
+                  <UserPlus className="h-4 w-4" />
+                  Create Account
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

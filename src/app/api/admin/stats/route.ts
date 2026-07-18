@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSheetNames, getLeadsFromSheet } from "@/lib/google-sheets";
+import { getAllCachedTabs, getCachedLeads } from "@/lib/sheet-cache";
 
 export async function GET(request: NextRequest) {
   try {
-    const sheets = await getSheetNames();
+    const tabs = await getAllCachedTabs();
     const skipSheets = ["Dashboard", "Users"];
 
     let totalLeads = 0;
@@ -12,11 +12,11 @@ export async function GET(request: NextRequest) {
     let redLeads = 0;
     const categoryStats: Record<string, { total: number; sent: number; pending: number; red: number }> = {};
 
-    for (const sheet of sheets) {
-      if (skipSheets.includes(sheet)) continue;
+    for (const tab of tabs) {
+      if (skipSheets.includes(tab)) continue;
 
       try {
-        const leads = await getLeadsFromSheet(sheet);
+        const leads = await getCachedLeads(tab);
         const sheetTotal = leads.length;
         const sheetSent = leads.filter((l) => l.texted).length;
         const sheetRed = leads.filter((l) => l.red).length;
@@ -27,14 +27,14 @@ export async function GET(request: NextRequest) {
         redLeads += sheetRed;
         pendingLeads += sheetPending;
 
-        categoryStats[sheet] = {
+        categoryStats[tab] = {
           total: sheetTotal,
           sent: sheetSent,
           pending: sheetPending,
           red: sheetRed,
         };
       } catch {
-        // Skip sheets that fail to load
+        // Skip tabs that fail
       }
     }
 

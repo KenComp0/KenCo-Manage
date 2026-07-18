@@ -1,6 +1,4 @@
-import type { RateLimitEntry } from "@/types";
-
-const rateLimitStore = new Map<string, RateLimitEntry>();
+const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
 
 const CLEANUP_INTERVAL = 60 * 1000;
 let lastCleanup = Date.now();
@@ -40,27 +38,4 @@ export function checkRateLimit(
   return { allowed: true, remaining: limit - entry.count, resetAt: entry.resetAt };
 }
 
-export function checkDailyLimit(userId: string, limit: number): boolean {
-  const today = new Date().toISOString().split("T")[0];
-  const key = `daily:${userId}:${today}`;
-  const entry = rateLimitStore.get(key);
 
-  if (!entry) {
-    rateLimitStore.set(key, { count: 1, resetAt: Date.now() + 24 * 60 * 60 * 1000 });
-    return true;
-  }
-
-  if (entry.count >= limit) {
-    return false;
-  }
-
-  entry.count++;
-  return true;
-}
-
-export function getDailySendCount(userId: string): number {
-  const today = new Date().toISOString().split("T")[0];
-  const key = `daily:${userId}:${today}`;
-  const entry = rateLimitStore.get(key);
-  return entry?.count || 0;
-}

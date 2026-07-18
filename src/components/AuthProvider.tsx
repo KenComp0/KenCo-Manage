@@ -2,8 +2,8 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 import { auth } from "@/lib/firebase";
-import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
-import { getUserProfile, createUserProfile, type UserProfile } from "@/lib/user-profile";
+import { onAuthStateChanged, signOut, User as FirebaseUser } from "firebase/auth";
+import { getUserProfile, type UserProfile } from "@/lib/user-profile";
 
 interface AuthContextType {
   user: FirebaseUser | null;
@@ -23,8 +23,6 @@ export function useAuth() {
   return useContext(AuthContext);
 }
 
-const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || "").split(",").map((e) => e.trim());
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -35,23 +33,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(firebaseUser);
 
       if (firebaseUser) {
-        const isAdminUser = ADMIN_EMAILS.includes(firebaseUser.email || "");
-        let userProfile = await getUserProfile(firebaseUser.uid);
+        const userProfile = await getUserProfile(firebaseUser.uid);
 
         if (!userProfile) {
-          userProfile = await createUserProfile({
-            uid: firebaseUser.uid,
-            email: firebaseUser.email || "",
-            name: firebaseUser.displayName || firebaseUser.email?.split("@")[0] || "User",
-            role: isAdminUser ? "admin" : "sales",
-            assignedTab: "Location",
-            dailySends: 0,
-            lastSendDate: "",
-            totalSends: 0,
-          });
+          await signOut(auth);
+          setProfile(null);
+        } else {
+          setProfile(userProfile);
         }
-
-        setProfile(userProfile);
       } else {
         setProfile(null);
       }

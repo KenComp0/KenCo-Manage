@@ -3,7 +3,6 @@ export interface User {
   name: string;
   role: "admin" | "sales";
   assignedTab: string;
-  dailySends: number;
   lastActive: string;
 }
 
@@ -31,7 +30,4 @@ export interface DashboardStats {
   perUser: Record<string, number>;
 }
 
-export interface RateLimitEntry {
-  count: number;
-  resetAt: number;
-}
+

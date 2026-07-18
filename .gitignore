@@ -30,6 +30,10 @@ serviceAccountKey.json
 *-service-account.json
 firebase-adminsdk*.json
 credentials*.json
+kenco-*.json
+
+# scripts (local only)
+scripts/
 
 # logs
 npm-debug.log*

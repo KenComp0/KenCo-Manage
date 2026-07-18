@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { updateLeadField, updateDashboardCount } from "@/lib/google-sheets";
+import { updateCachedLead } from "@/lib/sheet-cache";
 import { logActivity } from "@/lib/activity";
-import { checkAndIncrementDailyLimit } from "@/lib/daily-limit";
 
 export async function POST(
   request: NextRequest,
@@ -24,7 +24,9 @@ export async function POST(
   try {
     if (red) {
       await updateLeadField(tab, rowNumber, "RED?", "TRUE");
+      await updateCachedLead(tab, rowNumber, "RED?", "TRUE");
       await updateLeadField(tab, rowNumber, "Done By", userId);
+      await updateCachedLead(tab, rowNumber, "Done By", userId);
 
       await logActivity({
         userId,
@@ -41,20 +43,10 @@ export async function POST(
       });
     }
 
-    const limitResult = await checkAndIncrementDailyLimit(userId);
-    if (!limitResult.allowed) {
-      return NextResponse.json(
-        {
-          error: "Daily limit reached",
-          dailySends: limitResult.dailySends,
-          dailyLimit: limitResult.dailyLimit,
-        },
-        { status: 429 }
-      );
-    }
-
     await updateLeadField(tab, rowNumber, "TEXTED?", "TRUE");
+    await updateCachedLead(tab, rowNumber, "TEXTED?", "TRUE");
     await updateLeadField(tab, rowNumber, "Done By", userId);
+    await updateCachedLead(tab, rowNumber, "Done By", userId);
 
     const today = new Date().toISOString().split("T")[0];
     await updateDashboardCount(today);
@@ -71,9 +63,6 @@ export async function POST(
     return NextResponse.json({
       success: true,
       message: `Message marked as sent to ${businessName}`,
-      dailySends: limitResult.dailySends,
-      totalSends: limitResult.totalSends,
-      dailyLimit: limitResult.dailyLimit,
     });
   } catch (error: any) {
     console.error("Send error:", error);
