@@ -49,8 +49,15 @@ export default function SendPage() {
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-    setMessage(MESSAGES_MAP[selectedCategory] || "");
+    const saved = localStorage.getItem(`msg_template_${selectedCategory}`);
+    setMessage(saved || MESSAGES_MAP[selectedCategory] || "");
   }, [selectedCategory]);
+
+  useEffect(() => {
+    if (message) {
+      localStorage.setItem(`msg_template_${selectedCategory}`, message);
+    }
+  }, [message, selectedCategory]);
 
   const fetchNextLead = useCallback(
     async (afterRow?: number) => {
@@ -283,7 +290,7 @@ export default function SendPage() {
       </div>
 
       {loading ? (
-        <Card className="min-h-[400px] flex items-center justify-center">
+        <Card className="min-h-[300px] sm:min-h-[400px] flex items-center justify-center">
           <div className="text-center">
             <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-4 animate-pulse">
               <Phone className="h-6 w-6 text-primary" />
@@ -292,7 +299,7 @@ export default function SendPage() {
           </div>
         </Card>
       ) : !currentLead ? (
-        <Card className="min-h-[400px] flex items-center justify-center">
+        <Card className="min-h-[300px] sm:min-h-[400px] flex items-center justify-center">
           <div className="text-center">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-success/20 mb-4">
               <CheckCircle className="h-8 w-8 text-success" />
@@ -306,14 +313,14 @@ export default function SendPage() {
           </div>
         </Card>
       ) : (
-        <Card className="min-h-[400px]">
+        <Card className="min-h-[300px] sm:min-h-[400px]">
           <div className="flex flex-col h-full">
             <div className="flex items-start gap-4 mb-6">
               <div className="w-14 h-14 rounded-2xl bg-primary/15 flex items-center justify-center text-xl font-bold text-primary flex-shrink-0">
                 {currentLead.businessName.charAt(0).toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
-                <h2 className="text-2xl font-bold text-foreground mb-1">
+                <h2 className="text-xl sm:text-2xl font-bold text-foreground mb-1">
                   {currentLead.businessName}
                 </h2>
                 <div className="flex flex-wrap items-center gap-4 text-sm text-muted">
@@ -345,10 +352,17 @@ export default function SendPage() {
               </div>
             </div>
 
-            <div className="flex-1 p-4 rounded-xl bg-surface/50 mb-6">
-              <p className="text-xs text-muted mb-2 font-medium">Message to send:</p>
-              <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
-                {message.replace("{business_name}", currentLead.businessName)}
+            <div className="mb-6 space-y-2">
+              <p className="text-xs text-muted font-medium">Edit message (saves per category):</p>
+              <textarea
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                className="w-full h-20 sm:h-28 p-3 rounded-xl bg-surface border border-glass-border text-sm text-foreground resize-none focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none"
+                placeholder="Type your message..."
+              />
+              <p className="text-xs text-muted">
+                Preview: {message.replace("{business_name}", currentLead.businessName).slice(0, 120)}
+                {message.replace("{business_name}", currentLead.businessName).length > 120 ? "..." : ""}
               </p>
             </div>
 
